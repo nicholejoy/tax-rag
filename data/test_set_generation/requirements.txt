@@ -1,0 +1,4 @@
+requests
+anthropic
+PyMuPDF
+python-dotenv

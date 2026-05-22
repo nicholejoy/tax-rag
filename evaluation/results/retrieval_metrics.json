@@ -1,0 +1,7 @@
+{
+  "k": 5,
+  "num_samples": 185,
+  "match_strategy": "content",
+  "recall_at_5": 0.010810810810810811,
+  "hit_rate_at_5": 0.010810810810810811
+}
