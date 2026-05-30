@@ -93,6 +93,8 @@ async def query_documents(request: QueryRequest) -> QueryResponse:
             query=request.query,
             top_k=top_k,
             min_score=min_score,
+            reranker_model=settings.reranker_model,
+            reranker_enabled=settings.reranker_enabled,
         )
 
         return QueryResponse(
@@ -126,6 +128,8 @@ async def query_get(
             query=q,
             top_k=top_k,
             min_score=settings.min_similarity_score,
+            reranker_model=settings.reranker_model,
+            reranker_enabled=settings.reranker_enabled,
         )
 
         return QueryResponse(

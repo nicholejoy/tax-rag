@@ -3,7 +3,7 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Union
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class Document:
     metadata: dict
 
 
-def load_documents(file_path: str | Path) -> Iterator[Document]:
+def load_documents(file_path: Union[str, Path]) -> Iterator[Document]:
     path = Path(file_path)
     if not path.exists():
         raise FileNotFoundError(f"Document file not found: {path}")
@@ -180,7 +180,7 @@ def semantic_chunk(
 
 
 def chunk_documents(
-    file_path: str | Path,
+    file_path: Union[str, Path],
     chunk_size: int = 512,
     overlap: int = 64,
 ) -> list[Document]:

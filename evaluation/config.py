@@ -21,8 +21,8 @@ class EvalSettings(BaseSettings):
     # Dataset
     eval_dataset_path: str = "evaluation_data/input.jsonl"
 
-    # Embedding model (for any custom embedding steps)
-    embedding_model: str = "sentence-transformers/all-mpnet-base-v2"
+    # Embedding model (for RAGAS AnswerRelevancy and any custom embedding steps)
+    embedding_model: str = "intfloat/e5-large-v2"
 
     # LLM judge for RAGAS (Anthropic Claude)
     anthropic_api_key: str = ""

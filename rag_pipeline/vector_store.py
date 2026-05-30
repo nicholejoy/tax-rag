@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import faiss
 import numpy as np
@@ -27,7 +27,7 @@ class VectorStore:
             return
 
         texts = [doc.content for doc in documents]
-        embeddings = generate_embeddings(texts)
+        embeddings = generate_embeddings(texts, is_query=False)
 
         embedding_array = np.array(embeddings, dtype=np.float32)
         faiss.normalize_L2(embedding_array)
@@ -49,7 +49,7 @@ class VectorStore:
         if self.index is None or self.index.ntotal == 0:
             return []
 
-        query_embedding = generate_embeddings([query])
+        query_embedding = generate_embeddings([query], is_query=True)
         query_vector = np.array(query_embedding, dtype=np.float32)
         faiss.normalize_L2(query_vector)
 
@@ -68,7 +68,7 @@ class VectorStore:
         self.documents = []
         logger.info("Cleared vector store")
 
-    def save(self, path: str | Path) -> None:
+    def save(self, path: Union[str, Path]) -> None:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -87,7 +87,7 @@ class VectorStore:
                 }) + "\n")
         logger.info(f"Saved {len(self.documents)} documents to {docs_path}")
 
-    def load(self, path: str | Path) -> None:
+    def load(self, path: Union[str, Path]) -> None:
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(f"Index file not found: {path}")
@@ -143,7 +143,7 @@ def initialize_vector_store(
 
 
 def refresh_vector_store(
-    docs_path: str | Path,
+    docs_path: Union[str, Path],
     index_path: Optional[str] = None,
 ) -> VectorStore:
     from .chunker import chunk_documents

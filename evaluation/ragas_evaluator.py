@@ -16,7 +16,9 @@ from dataclasses import dataclass, field
 
 from anthropic import Anthropic
 from datasets import Dataset
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from ragas import evaluate
+from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.llms import llm_factory
 from ragas.metrics import (
     AnswerRelevancy,
@@ -89,7 +91,12 @@ def _build_ragas_llm(settings: EvalSettings):
         settings.ragas_llm_model,
         provider="anthropic",
         client=client,
+        max_tokens=4096,
     )
+    # Claude rejects requests with both temperature and top_p set.
+    # ragas InstructorModelArgs defaults to both; remove top_p for Anthropic.
+    if hasattr(llm, "model_args"):
+        llm.model_args.pop("top_p", None)
     logger.info("RAGAS LLM initialised: %s (anthropic)", settings.ragas_llm_model)
     return llm
 
@@ -148,9 +155,13 @@ def run_ragas_evaluation(
 
     llm = _build_ragas_llm(settings)
 
+    hf_embeddings = LangchainEmbeddingsWrapper(
+        HuggingFaceEmbeddings(model_name=settings.embedding_model)
+    )
+
     metrics = [
         Faithfulness(llm=llm),
-        AnswerRelevancy(llm=llm),
+        AnswerRelevancy(llm=llm, embeddings=hf_embeddings),
         ContextPrecision(llm=llm),
         ContextRecall(llm=llm),
     ]
@@ -165,12 +176,13 @@ def run_ragas_evaluation(
     # result is a ragas EvaluationResult; convert to a plain dict / DataFrame
     result_df = result.to_pandas()
 
-    # Per-sample scores
+    # Per-sample scores — use positional index to match questions because
+    # ragas may not preserve the "question" column in result_df.
     per_sample: list[PerSampleRagasScore] = []
-    for _, row in result_df.iterrows():
+    for i, (_, row) in enumerate(result_df.iterrows()):
         per_sample.append(
             PerSampleRagasScore(
-                question=str(row.get(_RAGAS_QUESTION_COL, "")),
+                question=questions[i] if i < len(questions) else str(row.get(_RAGAS_QUESTION_COL, "")),
                 faithfulness=_safe_float(row.get("faithfulness")),
                 answer_relevancy=_safe_float(row.get("answer_relevancy")),
                 context_precision=_safe_float(row.get("context_precision")),

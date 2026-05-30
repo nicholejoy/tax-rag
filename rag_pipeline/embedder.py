@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 from typing import Optional
 
 import torch
@@ -7,11 +6,17 @@ from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_MODEL = "sentence-transformers/all-mpnet-base-v2"
 _embeddings_model: Optional[SentenceTransformer] = None
 
 
-def load_embedding_model(model_name: str = _DEFAULT_MODEL) -> SentenceTransformer:
+def _get_prefix(model_name: str, is_query: bool) -> str:
+    # E5 models require explicit query/passage prefixes for correct retrieval behavior
+    if "e5" in model_name.lower():
+        return "query: " if is_query else "passage: "
+    return ""
+
+
+def load_embedding_model(model_name: str) -> SentenceTransformer:
     global _embeddings_model
     if _embeddings_model is None:
         logger.info(f"Loading embedding model: {model_name}")
@@ -22,18 +27,29 @@ def load_embedding_model(model_name: str = _DEFAULT_MODEL) -> SentenceTransforme
     return _embeddings_model
 
 
-def generate_embeddings(texts: list[str], model_name: Optional[str] = None) -> list[list[float]]:
+def generate_embeddings(
+    texts: list[str],
+    model_name: Optional[str] = None,
+    is_query: bool = False,
+) -> list[list[float]]:
     if not texts:
         return []
 
-    model = load_embedding_model(model_name or _DEFAULT_MODEL)
+    from .config import get_settings
+    effective_model = model_name or get_settings().embedding_model
+    model = load_embedding_model(effective_model)
+
+    prefix = _get_prefix(effective_model, is_query)
+    prefixed = [prefix + t for t in texts] if prefix else texts
 
     logger.debug(f"Generating embeddings for {len(texts)} texts")
-    embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
+    embeddings = model.encode(prefixed, convert_to_numpy=True, show_progress_bar=False)
 
     return [emb.tolist() for emb in embeddings]
 
 
-def get_embedding_dimension(model_name: str = _DEFAULT_MODEL) -> int:
-    model = load_embedding_model(model_name)
+def get_embedding_dimension(model_name: Optional[str] = None) -> int:
+    from .config import get_settings
+    effective_model = model_name or get_settings().embedding_model
+    model = load_embedding_model(effective_model)
     return model.get_sentence_embedding_dimension()

@@ -65,8 +65,10 @@ def _content_hit(
         if not ctx_tokens:
             continue
         intersection = gt_tokens & ctx_tokens
-        union = gt_tokens | ctx_tokens
-        overlap = len(intersection) / len(union)
+        # Use GT recall (fraction of GT tokens found in context) rather than
+        # Jaccard union — ground truth answers are short; retrieved chunks are
+        # long, so union-based Jaccard is always near zero even on a true hit.
+        overlap = len(intersection) / len(gt_tokens)
         if overlap >= threshold:
             return True
     return False
